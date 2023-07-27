@@ -2,3 +2,5 @@ numpy
 matplotlib
 librosa
 IPython
+hmmlearn
+torch

@@ -5,7 +5,7 @@ import librosa
 from IPython.display import Audio
 from scipy.fftpack import dct
 
-def stft(y, window_ms = 10, overlap_pct = 0.25):
+def stft(y, sr, window_ms = 10, overlap_pct = 0.25):
     window_size = int(window_ms * sr / 1000)
     hop = int(window_size * (1 - overlap_pct))
     w = np.hanning(window_size + 1)[:-1]
@@ -31,15 +31,33 @@ def mel_filter_bank(sr, n_fft, n_mels):
         for k in range(f_m_minus, f_m):
             fbank[m - 1, k] = (k - bins[m - 1]) / (bins[m] - bins[m - 1])
         for k in range(f_m, f_m_plus):
-            fbank[m - 1, k] = (bains[m + 1] - k) / (bins[m + 1] - bins[m])
+            fbank[m - 1, k] = (bins[m + 1] - k) / (bins[m + 1] - bins[m])
 
     return fbank
 
 def get_mfcc(y, sr, window_ms = 10, overlap_pct = 0.25, mel_banks = 20, n_mfcc = 12):
-    stft_result = stft(y, window_ms, overlap_pct)
+    stft_result = stft(y, sr, window_ms, overlap_pct)
     magnitude_spectrogram = np.abs(stft_result)
     power_spectrogram = magnitude_spectrogram ** 2 #Power = amplitude^2 is often taken as it aligns more with human hearing
     mel_filterbank  = mel_filter_bank(sr, power_spectrogram.shape[1], mel_banks)
     mel_spectrogram = np.dot(power_spectrogram, mel_filterbank.T)
     log_mel_spectrogram = np.log(mel_spectrogram)
     return dct(log_mel_spectrogram, type=2, axis=1, norm='ortho')[:, 1:(n_mfcc+1)] # Keep first few coefficients, except the first, as others are usually not informative
+
+def pad_and_stack(list_of_arrays):
+    max_length = max(arr.shape[0] for arr in list_of_arrays)
+    
+    padded_arrays = []
+    masks = []
+    for arr in list_of_arrays:
+        padding_length = max_length - arr.shape[0]
+        padded_array = np.pad(arr, ((0, padding_length), (0, 0)), 'constant')
+        mask = np.pad(np.ones_like(arr, dtype=bool), ((0, padding_length), (0, 0)), 'constant', constant_values=False)
+        
+        padded_arrays.append(padded_array)
+        masks.append(mask)
+    
+    stacked_array = np.stack(padded_arrays)
+    stacked_mask = np.stack(masks)
+    
+    return stacked_array, stacked_mask
