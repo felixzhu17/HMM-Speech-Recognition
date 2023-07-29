@@ -50,9 +50,10 @@ class DNNHMM:
         self.log_A = np.log(self.A)
 
         self.nn = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _init_nn(self):
-        self.nn = DNN(self.n_dims, self.n_states, self.n_encoding_dims)
+        self.nn = DNN(self.n_dims, self.n_states, self.n_encoding_dims).to(self.device)
 
     def log_likelihood(self, obs):
         self._check_obs(obs)
@@ -118,7 +119,7 @@ class DNNHMM:
         if mask is not None:
             self._check_mask(mask)
             mask = (
-                torch.tensor(mask[:, :, 0])
+                torch.tensor(mask[:, :, 0], device = self.device)
                 .unsqueeze(1)
                 .expand((n_batches, self.n_states, n_observations))
             )
@@ -131,7 +132,7 @@ class DNNHMM:
                 obs, tensor=True
             )
             loss = criterion(
-                emission_log_likelihood[mask], torch.tensor(gamma_s).float()[mask]
+                emission_log_likelihood[mask], torch.tensor(gamma_s, device = self.device).float()[mask]
             )
             loss.backward()
             optimizer.step()
@@ -150,11 +151,11 @@ class DNNHMM:
         return
 
     def _get_emission_log_likelihood(self, obs, tensor=False):
-        output = self.nn(torch.tensor(obs).float()).permute(0, 2, 1)
+        output = self.nn(torch.tensor(obs, device = self.device).float()).permute(0, 2, 1)
         if tensor:
             return output
         else:
-            return output.detach().numpy()
+            return output.to('cpu').detach().numpy()
 
     def forward(self, obs, emission_log_likelihood=None):
         if emission_log_likelihood is None:

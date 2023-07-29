@@ -96,6 +96,9 @@ def compute_nn_accuracies(model, test_data, batch_size=1):
         float: The top-3 accuracy.
     """
     # Ensure model is in evaluation mode
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     model.eval()
 
     top1_acc = 0
@@ -106,6 +109,7 @@ def compute_nn_accuracies(model, test_data, batch_size=1):
 
     with torch.no_grad():
         for i, (inputs, targets, masks) in enumerate(test_dataloader):
+            inputs, targets, masks = inputs.to(device), targets.to(device), masks.to(device)
             outputs = model(inputs)
             top1_acc += top1_accuracy(outputs, targets) * len(targets)
             top3_acc += topk_accuracy(outputs, targets) * len(targets)

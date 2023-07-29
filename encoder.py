@@ -80,6 +80,8 @@ def train_model(model, train_data, num_epochs=50, learning_rate=0.001, batch_siz
     """
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
 
     # Wrap your train_data in a DataLoader
     train_loader = DataLoader(train_data, batch_size=batch_size)
@@ -89,6 +91,7 @@ def train_model(model, train_data, num_epochs=50, learning_rate=0.001, batch_siz
         num_batches = 0  # keep track of number of batches processed
 
         for x, y, mask in train_loader:
+            x, y, mask = x.to(device), y.to(device), mask.to(device)
             optimizer.zero_grad()  # zero the parameter gradients
 
             outputs = model(x, mask)  # forward pass, get the output of the network
